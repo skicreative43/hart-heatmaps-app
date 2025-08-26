@@ -14,7 +14,7 @@ from charts import make_heatmap_figure, legend_box
 
 st.set_page_config(page_title="Hart Heat Maps", layout="wide")
 
-st.title("📊 Hart Heat Maps — Cloud Mini App")
+st.title("📊 Hart Heat Maps — Cloud Edition")
 
 # --- Sidebar-CS ---
 with st.sidebar:
