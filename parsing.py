@@ -3,11 +3,18 @@ import pandas as pd
 from typing import Tuple
 
 VALID_DEPARTMENTS = [
-    "Creative - Designer", "Creative - Writer",
-    "Tech - Front-end", "Tech - Back-end",
-    "Video", "Strategy",
-    "PR - Traditional", "PR - Social",
+    "Creative - Designer",
+    "Creative - Writer",
+    "Tech - Front-end",
+    "Tech - Back-end",
+    "Video",
+    "Strategy",
+    "PR - Traditional",
+    "PR - Social",
+    "Account",
+    "Project Management",
 ]
+
 
 HOURS_PER_FTE = 32
 
@@ -51,7 +58,7 @@ def parse_workamajig_csv(file_obj) -> Tuple[pd.DataFrame, pd.Timestamp]:
     return long, report_date
 
 
-def build_weekly_headcount(long_df: pd.DataFrame, employees_df: pd.DataFrame, services_df: pd.DataFrame, report_date: pd.Timestamp):
+def build_weekly_headcount(long_df: pd.DataFrame, employees_df: pd.DataFrame, services_df: pd.DataFrame, report_date: pd.Timestamp, window_weeks: int = 12):
     emp = employees_df.rename(columns={"Resource Name":"Name"})[["Name","Department"]]
     svc = services_df.rename(columns={"Service":"Name"})[["Name","Department"]]
     mapping = pd.concat([emp, svc], ignore_index=True)
@@ -74,7 +81,7 @@ def build_weekly_headcount(long_df: pd.DataFrame, employees_df: pd.DataFrame, se
     weekly["Available"] = weekly["Department"].map(available.to_dict())
     weekly["Gap"] = weekly["Available"] - weekly["Headcount_Demand"]
 
-    mask = (weekly["Week"] > report_date) & (weekly["Week"] <= report_date + pd.Timedelta(weeks=12))
+    mask = (weekly["Week"] > report_date) & (weekly["Week"] <= report_date + pd.Timedelta(weeks=window_weeks))
     weekly = weekly[mask].copy()
 
     return weekly, available

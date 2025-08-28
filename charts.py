@@ -112,41 +112,109 @@ def make_heatmap_figure(
     fig.tight_layout()
     return fig
 
+
+
 def legend_box(available_series: pd.Series):
-    """Single boxed legend laid out in five columns with bold totals."""
+    """Legend with PNG icons, centered text, bold totals, row-equalized cell heights."""
+    from matplotlib.patches import Rectangle
+    from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+    import matplotlib.image as mpimg
+
     groups = {
+        "Account": ["Account"],
         "Creative": ["Creative - Designer", "Creative - Writer"],
         "PR": ["PR - Traditional", "PR - Social"],
+        "Project Management": ["Project Management"],
         "Strategy": ["Strategy"],
         "Tech": ["Tech - Front-end", "Tech - Back-end"],
         "Video": ["Video"],
     }
-    cols = []
-    for g, subs in groups.items():
+
+    icons = {
+        "Account": "icons/account.png",
+        "Creative": "icons/creative.png",
+        "PR": "icons/pr.png",
+        "Project Management": "icons/project.png",
+        "Strategy": "icons/strategy.png",
+        "Tech": "icons/tech.png",
+        "Video": "icons/video.png",
+    }
+
+    def make_lines(subs):
         lines = [f"{d}: {int(available_series.get(d, 0))}" for d in subs]
-        if len(subs) > 1:
-            total = int(sum(available_series.get(d, 0) for d in subs))
-            lines.append(f"**{g} Total: {total}**")
-        cols.append("\n".join(lines))
+        total = int(sum(available_series.get(d, 0) for d in subs))
+        lines.append(f"Total: {total}")
+        return lines
 
-    fig, ax = plt.subplots(figsize=(11, 2.5))
+    headers = list(groups.keys())
+    data = {h: make_lines(subs) for h, subs in groups.items()}
+
+    positions = [
+        (0, 1), (1, 1), (2, 1), (3, 1),
+        (0, 0), (1, 0), (2, 0)
+    ]
+
+    fig, ax = plt.subplots(figsize=(12, 6))
     ax.axis("off")
-    x_positions = [0.04, 0.24, 0.44, 0.64, 0.84]
-    headers = ["Creative", "PR", "Strategy", "Tech", "Video"]
 
+    # Title
     ax.text(
-        0.5, 0.95, "Current Staff Availability",
-        ha='center', va='top', fontsize=12, fontweight='bold', transform=ax.transAxes
+        0.5, 1.05, "Current Staff Availability",
+        ha="center", va="bottom", fontsize=14, fontweight="bold",
+        family="DejaVu Sans", transform=ax.transAxes
     )
 
-    for x, header, text in zip(x_positions, headers, cols):
-        ax.text(x, 0.8, header, ha='left', va='top', fontsize=10, fontweight='bold', transform=ax.transAxes)
-        ax.text(x, 0.72, text, ha='left', va='top', fontsize=9, transform=ax.transAxes)
+    cell_w = 0.22
 
-    ax.add_patch(
-        plt.Rectangle((0.02, 0.05), 0.96, 0.9, fill=False, color='black', lw=1.2,
-                      transform=ax.transAxes, clip_on=False)
-    )
+    # --- Compute tallest cell per row ---
+    row_heights = {0: 0, 1: 0}
+    for (dept, lines), (col, row) in zip(data.items(), positions):
+        n_text_lines = len(lines) + 1  # dept name + text lines
+        n_icon_lines = 2
+        total_lines = n_text_lines + n_icon_lines
+        cell_h = 0.05 * total_lines
+        if cell_h > row_heights[row]:
+            row_heights[row] = cell_h
+
+    for (dept, lines), (col, row) in zip(data.items(), positions):
+        cell_h = row_heights[row]  # equalized height per row
+        y0 = 0.1 + row * 0.4
+        x0 = 0.05 + col * cell_w
+
+        ax.add_patch(
+            Rectangle((x0, y0), cell_w, cell_h,
+                      fill=False, lw=1.2, color="black",
+                      transform=ax.transAxes)
+        )
+
+        # Icon
+        if dept in icons:
+            try:
+                img = mpimg.imread(icons[dept])
+                imagebox = OffsetImage(img, zoom=0.1)
+                ab = AnnotationBbox(
+                    imagebox, (x0 + cell_w/2, y0 + cell_h - 0.05),
+                    frameon=False, box_alignment=(0.5, 1), xycoords=ax.transAxes
+                )
+                ax.add_artist(ab)
+            except FileNotFoundError:
+                pass
+
+        # Department name
+        ax.text(
+            x0 + cell_w/2, y0 + cell_h - 0.18, dept,
+            ha="center", va="top", fontsize=11, fontweight="bold",
+            family="DejaVu Sans", transform=ax.transAxes
+        )
+
+        # Lines
+        for i, line in enumerate(lines):
+            weight = "bold" if line.startswith("Total") else "normal"
+            ax.text(
+                x0 + cell_w/2, y0 + cell_h - 0.28 - i*0.07, line,
+                ha="center", va="top", fontsize=10, fontweight=weight,
+                family="DejaVu Sans", transform=ax.transAxes
+            )
 
     fig.tight_layout()
     return fig
